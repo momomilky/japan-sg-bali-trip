@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>東京・星洲・峇里 島嶼漫遊 2026</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 設定 Tailwind 自訂莫蘭蒂主題色系 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'theme-bg': '#F5F3F0',         /* 燕麥暖白背景 */
+            'theme-card': '#FFFFFF',       /* 卡片底色 */
+            'theme-primary': '#C59B9B',    /* 乾燥玫瑰粉 (主要視覺、選中狀態、懸浮按鈕) */
+            'theme-secondary': '#E2C2B9',  /* 柔裸粉 (次要視覺、懸浮按鈕) */
+            'theme-accent': '#93A2AD',     /* 莫蘭蒂灰藍 (焦點標示與地圖導航按鈕) */
+            'theme-dark': '#4A5568',       /* 石墨灰藍文字 */
+            'theme-muted': '#93A2AD',      /* 淺灰藍色文字 */
+            'theme-light-pink': '#F9F4F4', /* 淡乾燥玫瑰粉背景色塊 */
+            'theme-light-blue': '#EBF0F3'  /* 霧藍微灰背景色塊 */
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SortableJS -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    body {
+      background-color: #F5F3F0; /* 燕麥暖白 */
+      color: #4A5568; /* 石墨灰藍 */
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background-color: #F5F3F0; /* 燕麥暖白 */
+      box-shadow: 0 0 20px rgba(197, 155, 155, 0.15);
+      position: relative;
+      padding-bottom: 90px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app" class="app-container">
+
+  <!-- 頂部 Header -->
+  <div class="bg-white px-5 pt-6 pb-4 border-b border-[#EBF0F3] flex items-center justify-between sticky top-0 z-20 shadow-sm">
+    <div>
+      <p class="text-[10px] tracking-widest uppercase text-theme-primary font-bold">Trip 2026</p>
+      <h1 class="text-xl font-bold text-theme-dark tracking-wide">東京・新加坡・峇里</h1>
+    </div>
+
+    <!-- 頂部頁籤導覽 -->
+    <div class="flex bg-theme-light-blue rounded-full p-1 border border-[#EBF0F3]">
+      <button @click="switchTab('itinerary')" :class="{'bg-theme-primary text-white shadow-sm': currentTab === 'itinerary', 'text-theme-dark': currentTab !== 'itinerary'}" class="p-2 rounded-full transition-all">
+        <i data-lucide="map-pin" class="w-4 h-4 block"></i>
+      </button>
+      <button @click="switchTab('todolist')" :class="{'bg-theme-primary text-white shadow-sm': currentTab === 'todolist', 'text-theme-dark': currentTab !== 'todolist'}" class="p-2 rounded-full transition-all">
+        <i data-lucide="check-square" class="w-4 h-4 block"></i>
+      </button>
+      <button @click="switchTab('info')" :class="{'bg-theme-primary text-white shadow-sm': currentTab === 'info', 'text-theme-dark': currentTab !== 'info'}" class="p-2 rounded-full transition-all">
+        <i data-lucide="info" class="w-4 h-4 block"></i>
+      </button>
+      <button @click="switchTab('shopping')" :class="{'bg-theme-primary text-white shadow-sm': currentTab === 'shopping', 'text-theme-dark': currentTab !== 'shopping'}" class="p-2 rounded-full transition-all">
+        <i data-lucide="shopping-basket" class="w-4 h-4 block"></i>
+      </button>
+      <button @click="switchTab('expenses')" :class="{'bg-theme-primary text-white shadow-sm': currentTab === 'expenses', 'text-theme-dark': currentTab !== 'expenses'}" class="p-2 rounded-full transition-all">
+        <i data-lucide="coins" class="w-4 h-4 block"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. 每日行程頁面 -->
+  <div v-show="currentTab === 'itinerary'" class="px-4 pt-4">
+    
+    <!-- 日期選單 -->
+    <div class="flex overflow-x-auto space-x-2 pb-3 no-scrollbar">
+      <button 
+        v-for="date in dates" 
+        :key="date.full"
+        @click="selectedDate = date.full"
+        :class="{'bg-gradient-to-br from-theme-primary to-theme-secondary text-white shadow-md': selectedDate === date.full, 'bg-white text-theme-dark border border-[#EBF0F3]': selectedDate !== date.full}"
+        class="flex-shrink-0 w-14 h-16 rounded-2xl flex flex-col items-center justify-center transition-all duration-200">
+        <span class="text-xs font-semibold uppercase">{{ date.day }}</span>
+        <span class="text-lg font-bold mt-0.5">{{ date.num }}</span>
+      </button>
+    </div>
+
+    <!-- 天氣資訊 -->
+    <div class="bg-white rounded-2xl p-3 my-1 flex items-center justify-between text-theme-dark shadow-sm border border-[#EBF0F3] mb-4">
+      <div class="flex items-center space-x-3">
+        <i :data-lucide="currentWeather.icon" class="w-7 h-7 text-theme-primary block"></i>
+        <div>
+          <p class="text-xs text-theme-muted">{{ currentCity }} 天氣</p>
+          <p class="text-sm font-medium">{{ currentWeather.temp }}°C <span class="text-xs text-theme-muted">(體感 {{ currentWeather.feelsLike }}°C)</span></p>
+        </div>
+      </div>
+      <span class="text-xs bg-theme-light-pink px-2.5 py-1 rounded-full text-theme-accent font-medium">{{ currentWeather.condition }}</span>
+    </div>
+
+    <!-- 時間軸行程清單 -->
+    <div id="itinerary-list" class="relative space-y-2 pb-2">
+      
+      <!-- 全日貫穿的連續垂直線：位置在左側 48px 處 -->
+      <div class="absolute left-[48px] top-3 bottom-3 w-0.5 bg-gradient-to-b from-theme-primary via-theme-secondary to-theme-primary rounded-full z-0"></div>
+
+      <div v-for="(item, index) in filteredItinerary" :key="item.id" :data-id="item.id" class="relative flex items-start z-10">
+        
+        <!-- 左側時間與圓點區塊 -->
+        <div class="w-[48px] flex-shrink-0 pt-1 flex flex-col items-end pr-3 relative">
+          <span class="text-[10px] font-bold text-theme-dark leading-none block mb-1 text-right">{{ item.time || '--:--' }}</span>
+          <div class="w-3 h-3 rounded-full bg-white border-2 border-theme-primary shadow-sm absolute right-[-6px] top-1 z-10"></div>
+        </div>
+
+        <!-- 右側：行程內容區域 -->
+        <div class="flex-1 pl-2">
+          <!-- 航班卡片 -->
+          <div v-if="item.category === '航班'" class="bg-white border border-[#EBF0F3] rounded-2xl p-3 shadow-sm relative cursor-pointer text-theme-dark" @click="openEditModal('itinerary', item)">
+            <div class="flex justify-between items-center text-xs border-b border-[#EBF0F3] pb-1.5 mb-1.5">
+              <span class="text-gray-400 font-medium">{{ item.dateStr || '2026' }}</span>
+              <span class="text-theme-primary font-bold">{{ item.fromCity }} ➔ {{ item.toCity }}</span>
+              <span class="text-theme-accent font-bold bg-theme-light-pink px-2 py-0.5 rounded-md">{{ item.flightNo }}</span>
+            </div>
+
+            <div class="flex justify-between items-center my-1">
+              <div>
+                <p class="text-xs font-bold text-theme-primary">{{ item.depCode }}</p>
+                <p class="text-xl font-bold text-theme-dark leading-tight">{{ item.depTime }}</p>
+                <p class="text-[10px] text-gray-400 font-medium">{{ item.depTerminal }}</p>
+              </div>
+
+              <div class="flex-1 px-3 flex flex-col items-center">
+                <span class="text-[10px] text-gray-400 font-medium mb-0.5">{{ item.duration || '4h 25m' }}</span>
+                <div class="w-full flex items-center relative">
+                  <div class="h-[1.5px] bg-[#EBF0F3] w-full rounded-full"></div>
+                  <i data-lucide="plane" class="w-3.5 h-3.5 text-theme-primary absolute left-1/2 -translate-x-1/2 bg-white px-0.5 transform rotate-90 block"></i>
+                  <div class="w-1.5 h-1.5 rounded-full bg-theme-secondary absolute right-0"></div>
+                </div>
+              </div>
+
+              <div class="text-right">
+                <p class="text-xs font-bold text-theme-primary">{{ item.arrCode }}</p>
+                <p class="text-xl font-bold text-theme-dark leading-tight">{{ item.arrTime }}</p>
+                <p class="text-[10px] text-gray-400 font-medium">{{ item.arrTerminal }}</p>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-theme-dark/70 mt-1.5 pt-1 border-t border-[#EBF0F3]" v-if="item.notes">備註：{{ item.notes }}</p>
+          </div>
+
+          <!-- 一般卡片 -->
+          <div v-else class="bg-white rounded-2xl p-3 shadow-sm border border-[#EBF0F3] relative group cursor-pointer hover:border-theme-primary/30 transition-all" @click="openEditModal('itinerary', item)">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-[10px] px-2 py-0.5 rounded-full font-medium mb-1 inline-block" :class="getCategoryBadgeClass(item.category)">
+                  {{ item.category }}
+                </span>
+                <h3 class="font-bold text-theme-dark text-base">{{ item.title }}</h3>
+              </div>
+              <div class="flex items-center space-x-1">
+                <!-- 排序拖曳把手 -->
+                <span class="drag-handle p-1.5 text-gray-300 hover:text-theme-accent cursor-grab active:cursor-grabbing" title="按住拖曳排序">
+                  <i data-lucide="grip-vertical" class="w-4 h-4 block"></i>
+                </span>
+                <a :href="getGoogleMapUrl(item)" target="_blank" @click.stop class="p-1.5 bg-theme-light-blue rounded-full text-theme-accent hover:bg-theme-accent hover:text-white transition-colors">
+                  <i data-lucide="navigation" class="w-4 h-4 block"></i>
+                </a>
+              </div>
+            </div>
+
+            <div class="text-xs text-theme-muted space-y-0.5 mt-1">
+              <p v-if="item.location" class="flex items-center gap-1 text-theme-accent font-medium"><i data-lucide="map-pin" class="w-3.5 h-3.5 block"></i> 地點: {{ item.location }}</p>
+              <p v-if="item.ticket && item.ticket.trim() !== ''" class="flex items-center gap-1"><i data-lucide="ticket" class="w-3.5 h-3.5 block"></i> 門票: {{ item.ticket }}</p>
+              <p v-if="item.notes" class="flex items-center gap-1 text-theme-dark/80"><i data-lucide="file-text" class="w-3.5 h-3.5 block"></i> {{ item.notes }}</p>
+            </div>
+          </div>
+
+          <!-- 交通時間顯示 -->
+          <div v-if="item.transportTime && item.transportTime.trim() !== ''" class="flex items-center justify-center space-x-1.5 my-1.5 text-xs text-theme-muted">
+            <i :data-lucide="getTransportIcon(item.transportType)" class="w-3.5 h-3.5 text-theme-accent block"></i>
+            <span class="font-medium text-theme-dark/70">{{ getTransportLabel(item.transportType) }} {{ item.transportTime }}</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. To-Do List & Packing List 頁面 -->
+  <div v-show="currentTab === 'todolist'" class="px-4 pt-4 space-y-4">
+    <div class="flex bg-white p-1 rounded-2xl shadow-sm text-xs border border-[#EBF0F3]">
+      <button @click="todoTab = 'todo'" :class="{'bg-theme-primary text-white': todoTab === 'todo', 'text-theme-dark': todoTab !== 'todo'}" class="flex-1 py-2 rounded-xl transition-all font-medium">待辦事項 (To-Do)</button>
+      <button @click="todoTab = 'packing'" :class="{'bg-theme-primary text-white': todoTab === 'packing', 'text-theme-dark': todoTab !== 'packing'}" class="flex-1 py-2 rounded-xl transition-all font-medium">行李打包 (Packing)</button>
+    </div>
+
+    <div class="space-y-3">
+      <div v-for="item in activeTodoList" :key="item.id" 
+           class="bg-white rounded-2xl p-3.5 shadow-sm flex items-center justify-between border border-[#EBF0F3]">
+        <div class="flex items-center space-x-3 flex-1 cursor-pointer" @click="toggleTodoItem(item)">
+          <div :class="{'bg-theme-primary border-theme-primary': item.done, 'border-gray-300': !item.done}" 
+               class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0">
+            <i v-if="item.done" data-lucide="check" class="w-3.5 h-3.5 text-white block"></i>
+          </div>
+          <div>
+            <span :class="{'line-through text-gray-300': item.done}" class="text-sm font-medium text-theme-dark block">{{ item.text }}</span>
+            <div v-if="item.date || item.time" class="flex items-center gap-2 mt-0.5 text-[10px] text-theme-accent font-medium">
+              <span v-if="item.date" class="flex items-center gap-0.5"><i data-lucide="calendar" class="w-3 h-3 inline block"></i> {{ item.date }}</span>
+              <span v-if="item.time" class="flex items-center gap-0.5"><i data-lucide="clock" class="w-3 h-3 inline block"></i> {{ item.time }}</span>
+            </div>
+          </div>
+        </div>
+        <button @click.stop="openEditModal('todo', item)" class="p-1.5 text-gray-300 hover:text-theme-accent">
+          <i data-lucide="pencil" class="w-4 h-4 block"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 資訊頁面 -->
+  <div v-show="currentTab === 'info'" class="px-4 pt-4 space-y-4">
+    <div class="bg-white rounded-2xl p-4 shadow-sm border border-[#EBF0F3]">
+      <h2 class="font-bold text-theme-dark mb-3 flex items-center gap-2"><i data-lucide="calculator" class="w-5 h-5 text-theme-accent block"></i> 匯率即時換算</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">外幣金額</label>
+          <input v-model.number="calcAmount" type="number" class="w-full bg-theme-light-blue rounded-xl p-2.5 text-sm focus:outline-none text-theme-dark" placeholder="金額">
+        </div>
+        <div>
+          <label class="text-xs text-gray-400 mb-1 block">幣別</label>
+          <select v-model="calcCurrency" class="w-full bg-theme-light-blue rounded-xl p-2.5 text-sm focus:outline-none text-theme-dark">
+            <option value="JPY">日幣 (JPY)</option>
+            <option value="SGD">新加坡幣 (SGD)</option>
+            <option value="IDR">印尼盾 (IDR)</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-3 pt-3 border-t border-[#EBF0F3] text-right">
+        <span class="text-xs text-gray-400">約合港幣：</span>
+        <span class="text-xl font-bold text-theme-accent">HKD ${{ calculatedHKD }}</span>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      <h2 class="font-bold text-theme-dark flex items-center gap-2 px-1"><i data-lucide="plane" class="w-5 h-5 text-theme-accent block"></i> 航班資訊</h2>
+      <div v-for="flight in flightCards" :key="flight.code" class="bg-white border border-[#EBF0F3] rounded-2xl p-3.5 shadow-sm text-theme-dark">
+        <div class="flex justify-between items-center text-xs border-b border-[#EBF0F3] pb-2 mb-2">
+          <span class="text-gray-400 font-medium">{{ flight.dateStr }}</span>
+          <span class="text-theme-primary font-bold">{{ flight.fromCity }} ➔ {{ flight.toCity }}</span>
+          <span class="text-theme-accent font-bold bg-theme-light-pink px-2 py-0.5 rounded-md">{{ flight.code }}</span>
+        </div>
+
+        <div class="flex justify-between items-center my-1">
+          <div>
+            <p class="text-xs font-bold text-theme-primary">{{ flight.depCode }}</p>
+            <p class="text-xl font-bold text-theme-dark leading-tight">{{ flight.depTime }}</p>
+            <p class="text-[10px] text-gray-400 font-medium">{{ flight.depTerminal }}</p>
+          </div>
+
+          <div class="flex-1 px-3 flex flex-col items-center">
+            <span class="text-[10px] text-gray-400 font-medium mb-0.5">{{ flight.duration }}</span>
+            <div class="w-full flex items-center relative">
+              <div class="h-[1.5px] bg-[#EBF0F3] w-full rounded-full"></div>
+              <i data-lucide="plane" class="w-3.5 h-3.5 text-theme-accent absolute left-1/2 -translate-x-1/2 bg-white px-0.5 transform rotate-90 block"></i>
+              <div class="w-1.5 h-1.5 rounded-full bg-theme-secondary absolute right-0"></div>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <p class="text-xs font-bold text-theme-primary">{{ flight.arrCode }}</p>
+            <p class="text-xl font-bold text-theme-dark leading-tight">{{ flight.arrTime }}</p>
+            <p class="text-[10px] text-gray-400 font-medium">{{ flight.arrTerminal }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      <h2 class="font-bold text-theme-dark flex items-center gap-2 px-1"><i data-lucide="hotel" class="w-5 h-5 text-theme-accent block"></i> 住宿資訊</h2>
+      <div v-for="hotel in hotels" :key="hotel.name" class="bg-white border border-[#EBF0F3] rounded-2xl p-3.5 shadow-sm text-theme-dark">
+        <div class="flex justify-between items-center border-b border-[#EBF0F3] pb-2 mb-2">
+          <span class="font-bold text-sm text-theme-dark truncate max-w-[200px]">{{ hotel.name }}</span>
+          <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(hotel.name)" target="_blank" class="text-xs text-theme-accent flex items-center gap-0.5 font-medium hover:underline">
+            導航 <i data-lucide="external-link" class="w-3 h-3 block"></i>
+          </a>
+        </div>
+
+        <div class="flex justify-between items-center my-1">
+          <div>
+            <p class="text-xs font-bold text-theme-accent">CHECK-IN</p>
+            <p class="text-xl font-bold text-theme-dark leading-tight">{{ hotel.ci }}</p>
+            <p class="text-[10px] text-gray-400 font-medium">{{ hotel.date.split('-')[0] }}</p>
+          </div>
+
+          <div class="flex-1 px-3 flex flex-col items-center">
+            <span class="text-[10px] text-gray-400 font-medium mb-0.5">{{ hotel.nights }}</span>
+            <div class="w-full flex items-center relative">
+              <div class="h-[1.5px] bg-[#EBF0F3] w-full rounded-full"></div>
+              <i data-lucide="bed" class="w-3.5 h-3.5 text-theme-secondary absolute left-1/2 -translate-x-1/2 bg-white px-0.5 block"></i>
+              <div class="w-1.5 h-1.5 rounded-full bg-theme-primary absolute right-0"></div>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <p class="text-xs font-bold text-theme-accent">CHECK-OUT</p>
+            <p class="text-xl font-bold text-theme-dark leading-tight">{{ hotel.co }}</p>
+            <p class="text-[10px] text-gray-400 font-medium">{{ hotel.date.split('-')[1] }}</p>
+          </div>
+        </div>
+
+        <div class="text-[10px] text-gray-400 mt-2 pt-2 border-t border-[#EBF0F3] space-y-1">
+          <div class="flex justify-between">
+            <span>房型: {{ hotel.room }}</span>
+            <span class="font-medium text-theme-dark/70">{{ hotel.date }}</span>
+          </div>
+          <p v-if="hotel.address" class="flex items-center gap-1 text-theme-dark/80"><i data-lucide="map-pin" class="w-3 h-3 text-theme-accent block"></i> {{ hotel.address }}</p>
+          <p v-if="hotel.phone" class="flex items-center gap-1 text-theme-dark/80"><i data-lucide="phone" class="w-3 h-3 text-theme-accent block"></i> <a :href="'tel:' + hotel.phone" class="hover:underline text-theme-accent font-medium">{{ hotel.phone }}</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 購物清單頁面 -->
+  <div v-show="currentTab === 'shopping'" class="px-4 pt-4">
+    <div class="flex bg-white p-1 rounded-2xl mb-4 shadow-sm text-xs border border-[#EBF0F3]">
+      <button v-for="region in ['日本', '新加坡', '峇里島']" :key="region" 
+              @click="selectedRegion = region"
+              :class="{'bg-theme-primary text-white': selectedRegion === region, 'text-theme-dark': selectedRegion !== region}"
+              class="flex-1 py-2 rounded-xl text-center transition-all font-medium">
+        {{ region }}
+      </button>
+    </div>
+
+    <div class="space-y-3">
+      <div v-for="item in filteredShoppingList" :key="item.id" 
+           class="bg-white rounded-2xl p-3 shadow-sm flex items-center justify-between border border-[#EBF0F3]">
+        <div class="flex items-center space-x-3 flex-1 cursor-pointer" @click="toggleShopItem(item)">
+          <div :class="{'bg-theme-primary border-theme-primary': item.done, 'border-gray-300': !item.done}" 
+               class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all">
+            <i v-if="item.done" data-lucide="check" class="w-3.5 h-3.5 text-white block"></i>
+          </div>
+          <span :class="{'line-through text-gray-300': item.done}" class="text-sm font-medium text-theme-dark">{{ item.name }}</span>
+        </div>
+        <button @click.stop="openEditModal('shopping', item)" class="p-2 text-gray-300 hover:text-theme-accent">
+          <i data-lucide="pencil" class="w-4 h-4 block"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 花費頁面 -->
+  <div v-show="currentTab === 'expenses'" class="px-4 pt-4 space-y-4">
+    <div class="bg-gradient-to-r from-theme-primary to-theme-secondary text-white rounded-2xl p-4 shadow-md">
+      <div class="flex justify-between items-center border-b border-white/25 pb-3 mb-3">
+        <div>
+          <p class="text-[10px] opacity-80 uppercase tracking-wider">總花費 (HKD)</p>
+          <p class="text-2xl font-bold">HKD ${{ totalExpenseHKD }}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-[10px] opacity-80 uppercase tracking-wider">結算狀態</p>
+          <p class="text-sm font-bold bg-white/20 px-2.5 py-1 rounded-full inline-block mt-0.5">{{ settlementStatus }}</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs text-white/90">
+        <div class="bg-black/10 p-2 rounded-xl text-center">
+          <span class="opacity-75 block text-[10px]">bb 已支付</span>
+          <span class="font-bold text-sm">HKD ${{ bbTotalPaid }}</span>
+        </div>
+        <div class="bg-black/10 p-2 rounded-xl text-center">
+          <span class="opacity-75 block text-[10px]">cc 已支付</span>
+          <span class="font-bold text-sm">HKD ${{ ccTotalPaid }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex bg-white p-1 rounded-2xl shadow-sm text-xs border border-[#EBF0F3]">
+      <button @click="expenseFilter = 'all'" :class="{'bg-theme-primary text-white': expenseFilter === 'all', 'text-theme-dark': expenseFilter !== 'all'}" class="flex-1 py-2 rounded-xl transition-all font-medium">全部花費</button>
+      <button @click="expenseFilter = 'bb'" :class="{'bg-theme-primary text-white': expenseFilter === 'bb', 'text-theme-dark': expenseFilter !== 'bb'}" class="flex-1 py-2 rounded-xl transition-all font-medium">bb 付款</button>
+      <button @click="expenseFilter = 'cc'" :class="{'bg-theme-primary text-white': expenseFilter === 'cc', 'text-theme-dark': expenseFilter !== 'cc'}" class="flex-1 py-2 rounded-xl transition-all font-medium">cc 付款</button>
+    </div>
+
+    <div class="space-y-3">
+      <div v-for="exp in filteredExpenses" :key="exp.id" 
+           @click="openEditModal('expense', exp)"
+           class="bg-white rounded-2xl p-4 shadow-sm border border-[#EBF0F3] flex justify-between items-center cursor-pointer hover:border-theme-primary/40 transition-all">
+        <div>
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="text-[10px] bg-theme-light-blue px-2 py-0.5 rounded-full font-medium text-theme-accent">{{ exp.category }}</span>
+            <span class="text-[10px] bg-theme-light-pink text-theme-primary px-2 py-0.5 rounded-full font-bold uppercase">{{ exp.payer }} 付款</span>
+            <span class="text-[10px] text-gray-400">{{ getSplitLabel(exp.split) }}</span>
+          </div>
+          <p class="font-bold text-theme-dark text-sm">{{ exp.title }}</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">{{ exp.date }}</p>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-theme-dark text-sm">{{ exp.currency }} {{ exp.amount }}</p>
+          <p class="text-xs text-theme-accent font-medium">≈ HKD ${{ exp.hkdAmount }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 懸浮新增按鈕 -->
+  <button v-if="currentTab !== 'info'" 
+          @click="openAddModal(currentTab === 'expenses' ? 'expense' : (currentTab === 'todolist' ? 'todo' : currentTab))" 
+          class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-theme-primary to-theme-secondary text-white rounded-full flex items-center justify-center shadow-lg z-30 transform active:scale-95 transition-all">
+    <i data-lucide="plus" class="w-7 h-7 block"></i>
+  </button>
+
+  <!-- 編輯/新增 Modal -->
+  <div v-if="showModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[90vh] overflow-y-auto space-y-4">
+      <div class="flex justify-between items-center border-b border-[#EBF0F3] pb-3">
+        <h3 class="font-bold text-theme-dark">{{ isEditing ? '編輯項目' : '新增項目' }}</h3>
+        <button @click="closeModal" class="text-gray-400 p-1"><i data-lucide="x" class="w-5 h-5 block"></i></button>
+      </div>
+
+      <div v-if="modalType === 'itinerary'" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-400 mb-1">分類</label>
+          <select v-model="formData.category" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+            <option>景點</option><option>住宿</option><option>婚禮</option><option>美食</option><option>購物</option><option>航班</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-400 mb-1">名稱</label>
+          <input v-model="formData.title" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：銀座八五拉麵">
+        </div>
+
+        <div v-if="formData.category === '航班'" class="space-y-2 border-t border-b border-[#EBF0F3] py-2 my-2">
+          <p class="font-bold text-theme-dark">航班詳細資料</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-gray-400">日期字串</label><input v-model="formData.dateStr" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="Sat 12 Sep 2026"></div>
+            <div><label class="block text-gray-400">航班號</label><input v-model="formData.flightNo" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="CX526"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-gray-400">出發地</label><input v-model="formData.fromCity" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="Hong Kong"></div>
+            <div><label class="block text-gray-400">目的地</label><input v-model="formData.toCity" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="Tokyo"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-gray-400">出發機場代碼/時間</label><input v-model="formData.depCode" class="w-full bg-theme-light-blue rounded-xl p-2 outline-none text-theme-dark" placeholder="HKG"><input v-model="formData.depTime" class="w-full bg-theme-light-blue rounded-xl p-2 mt-1 outline-none text-theme-dark" placeholder="08:15"><input v-model="formData.depTerminal" class="w-full bg-theme-light-blue rounded-xl p-2 mt-1 outline-none text-theme-dark" placeholder="Terminal 1"></div>
+            <div><label class="block text-gray-400">到達機場代碼/時間</label><input v-model="formData.arrCode" class="w-full bg-theme-light-blue rounded-xl p-2 outline-none text-theme-dark" placeholder="NRT"><input v-model="formData.arrTime" class="w-full bg-theme-light-blue rounded-xl p-2 mt-1 outline-none text-theme-dark" placeholder="13:40"><input v-model="formData.arrTerminal" class="w-full bg-theme-light-blue rounded-xl p-2 mt-1 outline-none text-theme-dark" placeholder="Terminal 2"></div>
+          </div>
+          <div><label class="block text-gray-400">飛行時間</label><input v-model="formData.duration" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="4h 25m"></div>
+        </div>
+
+        <div v-if="formData.category !== '航班'" class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-400 mb-1">開始時間</label>
+            <input v-model="formData.time" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：11:00">
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">地點</label>
+            <input v-model="formData.location" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="地址或地標">
+          </div>
+        </div>
+
+        <div class="border-t border-b border-[#EBF0F3] py-3 my-2 space-y-2">
+          <p class="font-bold text-theme-dark">前往下一站交通設定</p>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-gray-400 mb-1">交通方式</label>
+              <select v-model="formData.transportType" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+                <option value="walk">步行 🚶</option>
+                <option value="bus">巴士 🚌</option>
+                <option value="subway">地鐵 🚇</option>
+                <option value="car">私家車 🚗</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1">所需時間 / 說明</label>
+              <input v-model="formData.transportTime" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：15 分鐘">
+            </div>
+          </div>
+        </div>
+
+        <div v-if="formData.category !== '航班'">
+          <label class="block text-gray-400 mb-1">門票費用 (空著不顯示)</label>
+          <input v-model="formData.ticket" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：¥2,000">
+        </div>
+        <div>
+          <label class="block text-gray-400 mb-1">備註</label>
+          <textarea v-model="formData.notes" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none h-20 text-theme-dark" placeholder="補充說明..."></textarea>
+        </div>
+      </div>
+
+      <div v-if="modalType === 'todo'" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-400 mb-1">清單類別</label>
+          <select v-model="formData.type" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+            <option value="todo">待辦事項 (To-Do)</option>
+            <option value="packing">行李打包 (Packing)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-400 mb-1">項目名稱</label>
+          <input v-model="formData.text" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：買護照套 / 帶護髮油">
+        </div>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <div>
+            <label class="block text-gray-400 mb-1">預計完成日期 (可選)</label>
+            <input v-model="formData.date" type="date" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">時間 (可選)</label>
+            <input v-model="formData.time" type="time" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+          </div>
+        </div>
+      </div>
+
+      <div v-if="modalType === 'expense'" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-400 mb-1">項目名稱</label>
+          <input v-model="formData.title" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：晚餐拉麵">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-400 mb-1">分類</label>
+            <select v-model="formData.category" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+              <option>飲食</option><option>交通</option><option>購物</option><option>門票</option><option>住宿</option><option>其他</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">日期</label>
+            <input v-model="formData.date" type="date" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-gray-400 mb-1">金額</label>
+            <input v-model.number="formData.amount" type="number" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="0">
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">幣別</label>
+            <select v-model="formData.currency" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+              <option value="JPY">日幣 (JPY)</option>
+              <option value="SGD">新幣 (SGD)</option>
+              <option value="IDR">印尼盾 (IDR)</option>
+              <option value="HKD">港幣 (HKD)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 border-t border-[#EBF0F3] pt-3">
+          <div>
+            <label class="block text-gray-400 mb-1">誰先付款？</label>
+            <select v-model="formData.payer" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none font-bold text-theme-accent">
+              <option value="bb">bb</option>
+              <option value="cc">cc</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">分攤方式</label>
+            <select v-model="formData.split" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+              <option value="both">兩人平分 (AA)</option>
+              <option value="bb">bb 獨負</option>
+              <option value="cc">cc 獨負</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="modalType === 'shopping'" class="space-y-3 text-xs">
+        <div>
+          <label class="block text-gray-400 mb-1">地區</label>
+          <select v-model="formData.region" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark">
+            <option>日本</option><option>新加坡</option><option>峇里島</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-gray-400 mb-1">商品名稱</label>
+          <input v-model="formData.name" class="w-full bg-theme-light-blue rounded-xl p-2.5 outline-none text-theme-dark" placeholder="例如：防曬乳">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button v-if="isEditing" @click="confirmDelete" class="flex-1 bg-red-50 text-red-500 py-3 rounded-xl font-bold text-xs">刪除</button>
+        <button @click="saveFormData" class="flex-1 bg-gradient-to-r from-theme-primary to-theme-secondary text-white py-3 rounded-xl font-bold text-xs shadow-md">儲存</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+
+  createApp({
+    setup() {
+      const currentTab = ref('itinerary');
+      const selectedDate = ref('2026-09-12');
+      const selectedRegion = ref('日本');
+      const todoTab = ref('todo');
+      const showModal = ref(false);
+      const isEditing = ref(false);
+      const modalType = ref('itinerary');
+
+      const calcAmount = ref(10000);
+      const calcCurrency = ref('JPY');
+      const rates = { JPY: 0.052, SGD: 5.8, IDR: 0.00049, HKD: 1.0 };
+
+      const calculatedHKD = computed(() => {
+        return ((calcAmount.value || 0) * (rates[calcCurrency.value] || 0)).toFixed(1);
+      });
+
+      const dates = [
+        { day: 'Sat', num: '12', full: '2026-09-12' },
+        { day: 'Sun', num: '13', full: '2026-09-13' },
+        { day: 'Mon', num: '14', full: '2026-09-14' },
+        { day: 'Tue', num: '15', full: '2026-09-15' },
+        { day: 'Wed', num: '16', full: '2026-09-16' },
+        { day: 'Thu', num: '17', full: '2026-09-17' },
+        { day: 'Fri', num: '18', full: '2026-09-18' },
+        { day: 'Sat', num: '19', full: '2026-09-19' },
+        { day: 'Sun', num: '20', full: '2026-09-20' },
+        { day: 'Mon', num: '21', full: '2026-09-21' },
+        { day: 'Tue', num: '22', full: '2026-09-22' }
+      ];
+
+      const flightCards = [
+        { dateStr: 'Sat 12 Sep 2026', code: 'CX526', fromCity: 'Hong Kong', toCity: 'Tokyo', depCode: 'HKG', arrCode: 'NRT', depTime: '08:15', arrTime: '13:40', depTerminal: 'Terminal 1', arrTerminal: 'Terminal 2', duration: '4h 25m' },
+        { dateStr: 'Wed 16 Sep 2026', code: 'SQ633', fromCity: 'Tokyo', toCity: 'Singapore', depCode: 'HND', arrCode: 'SIN', depTime: '17:05', arrTime: '23:05', depTerminal: 'Terminal 3', arrTerminal: 'Terminal 2', duration: '7h 00m' },
+        { dateStr: 'Fri 18 Sep 2026', code: 'TR288', fromCity: 'Singapore', toCity: 'Bali', depCode: 'SIN', arrCode: 'DPS', depTime: '10:15', arrTime: '13:05', depTerminal: 'Terminal 1', arrTerminal: 'International', duration: '2h 50m' },
+        { dateStr: 'Tue 22 Sep 2026', code: 'CX784', fromCity: 'Bali', toCity: 'Hong Kong', depCode: 'DPS', arrCode: 'HKG', depTime: '16:15', arrTime: '21:25', depTerminal: 'International', arrTerminal: 'Terminal 1', duration: '5h 10m' }
+      ];
+
+      const hotels = [
+        { 
+          name: 'Shibuya Stream Hotel', 
+          date: '12 SEP - 16 SEP', 
+          nights: '4 晚', 
+          room: '標準雙人房', 
+          ci: '14:00', 
+          co: '11:00',
+          address: '3-21-3 Shibuya, Shibuya-ku, Tokyo',
+          phone: '+81 3-3406-1090'
+        },
+        { 
+          name: 'Dao by Dorsett AMTD', 
+          date: '16 SEP - 18 SEP', 
+          nights: '2 晚', 
+          room: 'Studio Deluxe Room', 
+          ci: '15:00', 
+          co: '12:00',
+          address: '6 Shenton Way, OUE Downtown 1, Singapore',
+          phone: '+65 6812 6000'
+        },
+        { 
+          name: 'The Apurva Kempinski Bali', 
+          date: '18 SEP - 22 SEP', 
+          nights: '4 晚', 
+          room: 'Grand Deluxe / Ocean Court', 
+          ci: '15:00', 
+          co: '12:00',
+          address: 'Jalan Raya Nusa Dua Selatan, Sawangan, Nusa Dua, Bali',
+          phone: '+62 361 2092288'
+        }
+      ];
+
+      const todoList = ref([
+        { id: '1', type: 'todo', text: '填寫日本 Visit Japan Web 申報', date: '2026-09-10', time: '20:00', done: false },
+        { id: '2', type: 'todo', text: '申請印尼電子落地簽 (e-VOA)', date: '2026-09-11', time: '', done: false },
+        { id: '3', type: 'todo', text: '兌換日幣 & 印尼盾現鈔', date: '', time: '', done: true },
+        { id: '4', type: 'packing', text: '婚禮正式服裝 / 禮服 / 喜包', date: '', time: '', done: false },
+        { id: '5', type: 'packing', text: '護照 & 證件影本', date: '', time: '', done: true },
+        { id: '6', type: 'packing', text: '萬國轉接頭 & 行動電源', date: '', time: '', done: false }
+      ]);
+
+      const activeTodoList = computed(() => {
+        return todoList.value.filter(item => item.type === todoTab.value);
+      });
+
+      const currentCity = computed(() => {
+        if (selectedDate.value <= '2026-09-16') return '東京';
+        if (selectedDate.value <= '2026-09-18') return '新加坡';
+        return '峇里島';
+      });
+
+      const currentWeather = computed(() => {
+        if (currentCity.value === '東京') return { temp: 24, feelsLike: 25, condition: '多雲時晴', icon: 'sun' };
+        if (currentCity.value === '新加坡') return { temp: 30, feelsLike: 34, condition: '午後雷陣雨', icon: 'cloud-rain' };
+        return { temp: 29, feelsLike: 31, condition: '晴朗', icon: 'sun' };
+      });
+
+      const defaultItinerary = [
+        { 
+          id: '100', date: '2026-09-12', category: '航班', title: '香港飛東京成田', 
+          dateStr: 'Sat 12 Sep 2026', flightNo: 'CX526', fromCity: 'Hong Kong', toCity: 'Tokyo', 
+          depCode: 'HKG', depTime: '08:15', depTerminal: 'Terminal 1', 
+          arrCode: 'NRT', arrTime: '13:40', arrTerminal: 'Terminal 2', 
+          duration: '4h 25m', notes: '抵達後搭乘 Skyliner 至涉谷飯店', transportType: 'car', transportTime: '60 分鐘' 
+        },
+        { id: '101', date: '2026-09-12', category: '住宿', title: 'Check-in: Shibuya Stream Hotel', location: 'Shibuya Stream Hotel', time: '15:30', ticket: '', notes: '辦理入住手續', transportType: 'walk', transportTime: '10 分鐘' },
+        { id: '102', date: '2026-09-12', category: '住宿', title: '返回 Shibuya Stream Hotel 休息', location: 'Shibuya Stream Hotel', time: '22:00', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '103', date: '2026-09-13', category: '住宿', title: '出發: Shibuya Stream Hotel', location: 'Shibuya Stream Hotel', time: '09:00', ticket: '', notes: '', transportType: 'walk', transportTime: '10 分鐘' },
+        { id: '104', date: '2026-09-13', category: '住宿', title: '返回 Shibuya Stream Hotel 休息', location: 'Shibuya Stream Hotel', time: '21:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '105', date: '2026-09-14', category: '住宿', title: '出發: Shibuya Stream Hotel', location: 'Shibuya Stream Hotel', time: '09:00', ticket: '', notes: '', transportType: 'walk', transportTime: '10 分鐘' },
+        { id: '106', date: '2026-09-14', category: '住宿', title: '返回 Shibuya Stream Hotel 休息', location: 'Shibuya Stream Hotel', time: '21:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '1', date: '2026-09-15', category: '住宿', title: '出發: Shibuya Stream Hotel', location: 'Shibuya Stream Hotel', time: '09:30', ticket: '', notes: '準備展開一日行程', transportType: 'walk', transportTime: '15 分鐘' },
+        { id: '2', date: '2026-09-15', category: '景點', title: 'The World of Pixar Exhibition', location: 'CREVIA BASE Tokyo', time: '11:00', ticket: '¥2,000 (預訂)', notes: '展覽入口換票觀展', transportType: 'subway', transportTime: '20 分鐘' },
+        { id: '3', date: '2026-09-15', category: '美食', title: '銀座八五 (拉麵)', location: '東京都中央區銀座3-14-2', time: '13:30', ticket: '', notes: '預訂位，請準時抵達', transportType: 'car', transportTime: '30 分鐘' },
+        { id: '4', date: '2026-09-15', category: '住宿', title: '返回 Shibuya Stream Hotel 休息', location: 'Shibuya Stream Hotel', time: '21:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '5', date: '2026-09-16', category: '住宿', title: 'Check-out: Shibuya Stream Hotel', location: 'Shibuya Stream Hotel', time: '11:00', ticket: '', notes: '退房並前往羽田機場', transportType: 'bus', transportTime: '35 分鐘' },
+        { 
+          id: '6', date: '2026-09-16', category: '航班', title: '東京羽田飛新加坡', 
+          dateStr: 'Wed 16 Sep 2026', flightNo: 'SQ633', fromCity: 'Tokyo', toCity: 'Singapore', 
+          depCode: 'HND', depTime: '17:05', depTerminal: 'Terminal 3', 
+          arrCode: 'SIN', arrTime: '23:05', arrTerminal: 'Terminal 2', 
+          duration: '7h 00m', notes: '抵達後搭 Grab 至飯店', transportType: 'car', transportTime: '20 分鐘' 
+        },
+        { id: '7', date: '2026-09-16', category: '住宿', title: 'Check-in: Dao by Dorsett AMTD', location: 'Dao by Dorsett AMTD Singapore', time: '23:50', ticket: '', notes: '深夜辦理入住', transportType: 'walk', transportTime: '' },
+        
+        { id: '8', date: '2026-09-17', category: '住宿', title: '出發: Dao by Dorsett AMTD', location: 'Dao by Dorsett AMTD Singapore', time: '10:00', ticket: '', notes: '新加坡市區探索', transportType: 'walk', transportTime: '10 分鐘' },
+        { id: '9', date: '2026-09-17', category: '美食', title: '新加坡酒吧巡禮', location: 'Jigger & Pony', time: '20:00', ticket: '', notes: '造訪 Jigger & Pony, Native', transportType: 'walk', transportTime: '10 分鐘' },
+        { id: '10', date: '2026-09-17', category: '住宿', title: '返回 Dao by Dorsett AMTD 休息', location: 'Dao by Dorsett AMTD Singapore', time: '23:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '11', date: '2026-09-18', category: '住宿', title: 'Check-out: Dao by Dorsett AMTD', location: 'Dao by Dorsett AMTD Singapore', time: '07:30', ticket: '', notes: '前往樟宜機場', transportType: 'car', transportTime: '25 分鐘' },
+        { 
+          id: '12', date: '2026-09-18', category: '航班', title: '新加坡飛峇里島', 
+          dateStr: 'Fri 18 Sep 2026', flightNo: 'TR288', fromCity: 'Singapore', toCity: 'Bali', 
+          depCode: 'SIN', depTime: '10:15', depTerminal: 'Terminal 1', 
+          arrCode: 'DPS', arrTime: '13:05', arrTerminal: 'International', 
+          duration: '2h 50m', notes: '接駁車送往度假村', transportType: 'car', transportTime: '30 分鐘' 
+        },
+        { id: '13', date: '2026-09-18', category: '住宿', title: 'Check-in: The Apurva Kempinski Bali', location: 'The Apurva Kempinski Bali', time: '15:00', ticket: '', notes: '辦理奢華度假村入住', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '15', date: '2026-09-18', category: '婚禮', title: '出席迎賓晚宴 (Welcome Dinner)', location: 'Reef Beach Club', time: '18:30', ticket: '', notes: '參加新人舉辦的海灘迎賓晚宴', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '16', date: '2026-09-18', category: '住宿', title: '返回房型休息', location: 'The Apurva Kempinski Bali', time: '21:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '17', date: '2026-09-19', category: '住宿', title: '晨間準備: The Apurva Kempinski Bali', location: 'The Apurva Kempinski Bali', time: '08:30', ticket: '', notes: '享用早餐，更換婚禮出席正裝', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '19', date: '2026-09-19', category: '婚禮', title: '教堂觀禮 (Wedding Ceremony)', location: 'Ocean Front Apurva Chapel', time: '15:00', ticket: '', notes: '海景教堂證婚觀禮', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '20', date: '2026-09-19', category: '婚禮', title: '日落雞尾酒會 (Cocktail Reception)', location: 'Apurva Chapel Garden', time: '16:30', ticket: '', notes: '享用點心與新人合影', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '21', date: '2026-09-19', category: '婚禮', title: '星空晚宴 (Gala Dinner Reception)', location: 'Ocean Front Lawn', time: '18:30', ticket: '', notes: '參加新人婚宴', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '22', date: '2026-09-19', category: '婚禮', title: '婚禮派對 (After Party)', location: 'Beach Club', time: '21:30', ticket: '', notes: '與新人及賓客狂歡', transportType: 'walk', transportTime: '5 分鐘' },
+        { id: '23', date: '2026-09-19', category: '住宿', title: '返回房間休息', location: 'The Apurva Kempinski Bali', time: '23:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '24', date: '2026-09-20', category: '住宿', title: '出發: The Apurva Kempinski Bali', location: 'The Apurva Kempinski Bali', time: '11:00', ticket: '', notes: '', transportType: 'car', transportTime: '30 分鐘' },
+        { id: '25', date: '2026-09-20', category: '景點', title: 'Pantai Tanah Barak 海灘', location: 'Pantai Tanah Barak', time: '14:00', ticket: '', notes: '峭壁公路海灘拍照', transportType: 'car', transportTime: '45 分鐘' },
+        { id: '26', date: '2026-09-20', category: '美食', title: 'Alma Tapas Bar Uluwatu', location: 'Alma Tapas Bar Uluwatu', time: '18:30', ticket: '', notes: '享用晚餐', transportType: 'car', transportTime: '30 分鐘' },
+        { id: '27', date: '2026-09-20', category: '住宿', title: '返回 The Apurva Kempinski 休息', location: 'The Apurva Kempinski Bali', time: '21:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '107', date: '2026-09-21', category: '住宿', title: '出發: The Apurva Kempinski Bali', location: 'The Apurva Kempinski Bali', time: '10:00', ticket: '', notes: '峇里島自由探索', transportType: 'car', transportTime: '20 分鐘' },
+        { id: '108', date: '2026-09-21', category: '住宿', title: '返回 The Apurva Kempinski 休息', location: 'The Apurva Kempinski Bali', time: '21:30', ticket: '', notes: '', transportType: 'walk', transportTime: '' },
+        
+        { id: '109', date: '2026-09-22', category: '住宿', title: 'Check-out: The Apurva Kempinski Bali', location: 'The Apurva Kempinski Bali', time: '12:00', ticket: '', notes: '退房前往機場', transportType: 'car', transportTime: '30 分鐘' },
+        { 
+          id: '110', date: '2026-09-22', category: '航班', title: '峇里島飛香港', 
+          dateStr: 'Tue 22 Sep 2026', flightNo: 'CX784', fromCity: 'Bali', toCity: 'Hong Kong', 
+          depCode: 'DPS', depTime: '16:15', depTerminal: 'International', 
+          arrCode: 'HKG', arrTime: '21:25', arrTerminal: 'Terminal 1', 
+          duration: '5h 10m', notes: '返抵香港', transportType: 'walk', transportTime: '' 
+        }
+      ];
+
+      // 讀取本地端儲存，若無則使用預設行程
+      const loadSavedItinerary = () => {
+        const saved = localStorage.getItem('trip_itinerary_2026');
+        if (saved) {
+          try { return JSON.parse(saved); } catch (e) { }
+        }
+        return defaultItinerary;
+      };
+
+      const itineraryList = ref(loadSavedItinerary());
+
+      // 儲存至 LocalStorage 的輔助函式
+      const saveItineraryStorage = () => {
+        localStorage.setItem('trip_itinerary_2026', JSON.stringify(itineraryList.value));
+      };
+
+      const filteredItinerary = computed(() => {
+        return itineraryList.value.filter(item => item.date === selectedDate.value);
+      });
+
+      const shoppingList = ref([
+        { id: '1', region: '日本', name: '資生堂防曬乳', done: false },
+        { id: '2', region: '新加坡', name: '班蘭蛋糕', done: true },
+        { id: '3', region: '峇里島', name: '手工草編包', done: false }
+      ]);
+
+      const filteredShoppingList = computed(() => {
+        return shoppingList.value.filter(item => item.region === selectedRegion.value);
+      });
+
+      const expenses = ref([
+        { id: '1', category: '飲食', title: '銀座八五拉麵', date: '2026-09-15', amount: 4000, currency: 'JPY', hkdAmount: '208.0', payer: 'bb', split: 'both' },
+        { id: '2', category: '購物', title: '松本清藥妝', date: '2026-09-15', amount: 12000, currency: 'JPY', hkdAmount: '624.0', payer: 'cc', split: 'both' },
+        { id: '3', category: '門票', title: 'Pixar 展覽門票', date: '2026-09-15', amount: 4000, currency: 'JPY', hkdAmount: '208.0', payer: 'bb', split: 'both' }
+      ]);
+
+      const expenseFilter = ref('all');
+
+      const filteredExpenses = computed(() => {
+        if (expenseFilter.value === 'bb') return expenses.value.filter(e => e.payer === 'bb');
+        if (expenseFilter.value === 'cc') return expenses.value.filter(e => e.payer === 'cc');
+        return expenses.value;
+      });
+
+      const totalExpenseHKD = computed(() => {
+        return expenses.value.reduce((sum, item) => sum + Number(item.hkdAmount || 0), 0).toFixed(1);
+      });
+
+      const bbTotalPaid = computed(() => {
+        return expenses.value.filter(e => e.payer === 'bb').reduce((sum, item) => sum + Number(item.hkdAmount || 0), 0).toFixed(1);
+      });
+
+      const ccTotalPaid = computed(() => {
+        return expenses.value.filter(e => e.payer === 'cc').reduce((sum, item) => sum + Number(item.hkdAmount || 0), 0).toFixed(1);
+      });
+
+      const settlementStatus = computed(() => {
+        let ccOwesBb = 0;
+        expenses.value.forEach(exp => {
+          const hkd = Number(exp.hkdAmount) || 0;
+          if (exp.payer === 'bb') {
+            if (exp.split === 'both') ccOwesBb += hkd / 2;
+            else if (exp.split === 'cc') ccOwesBb += hkd;
+          } else if (exp.payer === 'cc') {
+            if (exp.split === 'both') ccOwesBb -= hkd / 2;
+            else if (exp.split === 'bb') ccOwesBb -= hkd;
+          }
+        });
+
+        if (Math.abs(ccOwesBb) < 0.1) return '互不相欠 👍';
+        if (ccOwesBb > 0) return `cc 需給 bb HKD $${ccOwesBb.toFixed(1)}`;
+        return `bb 需給 cc HKD $${Math.abs(ccOwesBb).toFixed(1)}`;
+      });
+
+      const formData = ref({});
+
+      const switchTab = (tab) => {
+        currentTab.value = tab;
+        renderIcons();
+      };
+
+      const openAddModal = (type) => {
+        modalType.value = type;
+        isEditing.value = false;
+
+        if (type === 'itinerary') {
+          formData.value = { 
+            date: selectedDate.value, category: '景點', title: '', location: '', ticket: '', time: '10:00', transportType: 'walk', transportTime: '',
+            dateStr: '', flightNo: '', fromCity: '', toCity: '', depCode: '', depTime: '', depTerminal: '', arrCode: '', arrTime: '', arrTerminal: '', duration: ''
+          };
+        } else if (type === 'todo') {
+          formData.value = { type: todoTab.value, text: '', date: '', time: '' };
+        } else if (type === 'expense') {
+          formData.value = {
+            category: '飲食', title: '', date: selectedDate.value, amount: 0, currency: 'JPY', payer: 'bb', split: 'both'
+          };
+        } else if (type === 'shopping') {
+          formData.value = { region: selectedRegion.value, name: '' };
+        }
+
+        showModal.value = true;
+        renderIcons();
+      };
+
+      const openEditModal = (type, item) => {
+        modalType.value = type;
+        isEditing.value = true;
+        formData.value = JSON.parse(JSON.stringify(item));
+        showModal.value = true;
+        renderIcons();
+      };
+
+      const closeModal = () => { showModal.value = false; };
+
+      // 輔助函式：將時間字串轉換為分數（方便比較大小）
+      const parseTimeToMinutes = (timeStr) => {
+        if (!timeStr || typeof timeStr !== 'string') return 9999;
+        const parts = timeStr.trim().split(':');
+        if (parts.length < 2) return 9999;
+        const h = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (isNaN(h) || isNaN(m)) return 9999;
+        return h * 60 + m;
+      };
+
+      const saveFormData = () => {
+        if (modalType.value === 'itinerary') {
+          if (isEditing.value) {
+            const idx = itineraryList.value.findIndex(i => i.id === formData.value.id);
+            if (idx !== -1) itineraryList.value[idx] = { ...formData.value };
+          } else {
+            const newItem = { ...formData.value, id: Date.now().toString() };
+            itineraryList.value.push(newItem);
+          }
+
+          // 根據該日所有行程的時間進行自動排序
+          const targetDate = formData.value.date || selectedDate.value;
+          const otherDays = itineraryList.value.filter(i => i.date !== targetDate);
+          const currentDayItems = itineraryList.value.filter(i => i.date === targetDate);
+
+          currentDayItems.sort((a, b) => {
+            const timeA = a.category === '航班' ? (a.depTime || '00:00') : (a.time || '00:00');
+            const timeB = b.category === '航班' ? (b.depTime || '00:00') : (b.time || '00:00');
+            return parseTimeToMinutes(timeA) - parseTimeToMinutes(timeB);
+          });
+
+          itineraryList.value = [...otherDays, ...currentDayItems].sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            const timeA = a.category === '航班' ? (a.depTime || '00:00') : (a.time || '00:00');
+            const timeB = b.category === '航班' ? (b.depTime || '00:00') : (b.time || '00:00');
+            return parseTimeToMinutes(timeA) - parseTimeToMinutes(timeB);
+          });
+
+          saveItineraryStorage();
+        } else if (modalType.value === 'todo') {
+          if (isEditing.value) {
+            const idx = todoList.value.findIndex(t => t.id === formData.value.id);
+            if (idx !== -1) todoList.value[idx] = { ...formData.value };
+          } else {
+            todoList.value.push({ ...formData.value, id: Date.now().toString(), done: false });
+          }
+        } else if (modalType.value === 'expense') {
+          const rate = rates[formData.value.currency] || 1;
+          formData.value.hkdAmount = ((formData.value.amount || 0) * rate).toFixed(1);
+
+          if (isEditing.value) {
+            const idx = expenses.value.findIndex(e => e.id === formData.value.id);
+            if (idx !== -1) expenses.value[idx] = { ...formData.value };
+          } else {
+            expenses.value.push({ ...formData.value, id: Date.now().toString() });
+          }
+        } else if (modalType.value === 'shopping') {
+          if (isEditing.value) {
+            const idx = shoppingList.value.findIndex(s => s.id === formData.value.id);
+            if (idx !== -1) shoppingList.value[idx] = { ...formData.value };
+          } else {
+            shoppingList.value.push({ ...formData.value, id: Date.now().toString(), done: false });
+          }
+        }
+
+        closeModal();
+        renderIcons();
+      };
+
+      const confirmDelete = () => {
+        if (confirm('確定要刪除嗎？')) {
+          if (modalType.value === 'itinerary') {
+            itineraryList.value = itineraryList.value.filter(i => i.id !== formData.value.id);
+            saveItineraryStorage();
+          } else if (modalType.value === 'todo') {
+            todoList.value = todoList.value.filter(t => t.id !== formData.value.id);
+          } else if (modalType.value === 'expense') {
+            expenses.value = expenses.value.filter(e => e.id !== formData.value.id);
+          } else if (modalType.value === 'shopping') {
+            shoppingList.value = shoppingList.value.filter(s => s.id !== formData.value.id);
+          }
+          closeModal();
+          renderIcons();
+        }
+      };
+
+      const toggleTodoItem = (item) => { item.done = !item.done; };
+      const toggleShopItem = (item) => { item.done = !item.done; };
+
+      const getGoogleMapUrl = (item) => {
+        const targetSearch = item.location && item.location.trim() !== '' ? item.location : item.title;
+        return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(targetSearch)}`;
+      };
+
+      const getCategoryBadgeClass = (cat) => {
+        const classes = {
+          '景點': 'bg-theme-light-blue text-theme-accent font-bold',
+          '美食': 'bg-theme-light-pink text-theme-primary font-bold',
+          '住宿': 'bg-theme-light-blue text-theme-dark font-bold',
+          '婚禮': 'bg-theme-light-pink text-theme-primary font-bold',
+          '購物': 'bg-theme-light-blue text-theme-accent font-bold'
+        };
+        return classes[cat] || 'bg-gray-100 text-gray-600';
+      };
+
+      const getTransportIcon = (type) => {
+        if (type === 'walk') return 'footprints';
+        if (type === 'bus') return 'bus';
+        if (type === 'subway') return 'train';
+        if (type === 'car') return 'car';
+        return 'bus';
+      };
+
+      const getTransportLabel = (type) => {
+        if (type === 'walk') return '步行';
+        if (type === 'bus') return '巴士';
+        if (type === 'subway') return '地鐵';
+        if (type === 'car') return '車程';
+        return '';
+      };
+
+      const getSplitLabel = (split) => {
+        if (split === 'both') return '平分 (AA)';
+        if (split === 'bb') return 'bb 獨負';
+        if (split === 'cc') return 'cc 獨負';
+        return '';
+      };
+
+      const renderIcons = () => {
+        nextTick(() => {
+          if (window.lucide) {
+            window.lucide.createIcons();
+          }
+        });
+      };
+
+      // 初始化 Sortable 拖曳排序並自動儲存至 LocalStorage
+      const initSortable = () => {
+        nextTick(() => {
+          const el = document.getElementById('itinerary-list');
+          if (el && window.Sortable && !el.__sortableInstance) {
+            el.__sortableInstance = Sortable.create(el, { 
+              animation: 150,
+              handle: '.drag-handle',
+              onEnd: (evt) => {
+                const movedItem = filteredItinerary.value[evt.oldIndex];
+                if (!movedItem) return;
+                
+                // 從原始陣列移除被拖曳的項目
+                const originalIndex = itineraryList.value.findIndex(i => i.id === movedItem.id);
+                if (originalIndex !== -1) {
+                  itineraryList.value.splice(originalIndex, 1);
+                }
+                
+                // 計算新的當日列表順序
+                const newFilteredList = [...filteredItinerary.value];
+                newFilteredList.splice(evt.newIndex, 0, movedItem);
+                
+                // 重新組合完整 itineraryList
+                const otherDaysItems = itineraryList.value.filter(i => i.date !== selectedDate.value);
+                itineraryList.value = [
+                  ...otherDaysItems.filter(i => i.date < selectedDate.value),
+                  ...newFilteredList,
+                  ...otherDaysItems.filter(i => i.date > selectedDate.value)
+                ];
+
+                // 自動儲存至 LocalStorage
+                saveItineraryStorage();
+                renderIcons();
+              }
+            });
+          }
+        });
+      };
+
+      onMounted(() => {
+        renderIcons();
+        initSortable();
+      });
+
+      watch(selectedDate, () => {
+        initSortable();
+        renderIcons();
+      });
+
+      return {
+        currentTab, selectedDate, selectedRegion, todoTab, dates, flightCards, hotels,
+        currentCity, currentWeather, filteredItinerary, filteredShoppingList, todoList, activeTodoList,
+        expenses, totalExpenseHKD, bbTotalPaid, ccTotalPaid, settlementStatus,
+        expenseFilter, filteredExpenses, calcAmount, calcCurrency, calculatedHKD,
+        showModal, isEditing, modalType, formData, switchTab,
+        openAddModal, openEditModal, closeModal, saveFormData, confirmDelete,
+        toggleTodoItem, toggleShopItem, getGoogleMapUrl, getCategoryBadgeClass, getTransportIcon, getTransportLabel, getSplitLabel, renderIcons
+      };
+    }
+  }).mount('#app');
+</script>
+
+</body>
+</html>
